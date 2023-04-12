@@ -9,11 +9,8 @@ use actix_web::HttpResponse;
 
 use chrono::prelude::Utc;
 
-// #[path = "../config/mod.rs"] mod config;
-
-
 #[get("/api/v1/health")]
-async fn helth() -> impl Responder {
+async fn helth_handler() -> impl Responder {
     #[derive(Debug, Serialize)]
     struct Health {
         status: String,
@@ -28,7 +25,7 @@ async fn helth() -> impl Responder {
 
 
 #[get("/api/v1/info")]
-async fn info() -> impl Responder {  
+async fn info_handler() -> impl Responder {  
     #[derive(Debug, Serialize)]
     struct Info {
         info: String,
@@ -47,7 +44,7 @@ async fn info() -> impl Responder {
 #[actix_web::main]
 pub async fn init(conf : super::config::Config) -> std::io::Result<()> {
     HttpServer::new(|| {
-        App::new().service(helth).service(info)
+        App::new().service(helth_handler).service(info_handler)
     })
     .bind(conf.server.address)?
     .run()
