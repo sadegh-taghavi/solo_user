@@ -31,11 +31,13 @@ async fn helth() -> impl Responder {
 async fn info() -> impl Responder {  
     #[derive(Debug, Serialize)]
     struct Info {
+        info: String,
         version: String,
         time: String,
     }
 
     let info = Info {
+        info: "user authentication service".to_string(),
         version: "0.0.1".to_string(),
         time: Utc::now().to_string(),
     };
