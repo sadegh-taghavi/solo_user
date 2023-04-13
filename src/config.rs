@@ -1,13 +1,27 @@
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config {
    pub server: Server,
+   pub db: DB,
+   pub jwt: JWT,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize,Clone)]
 pub struct Server {
    pub address: String,
+}
+
+#[derive(Debug, Deserialize,Clone)]
+pub struct DB {
+   pub datasource: String,
+}
+
+#[derive(Debug, Deserialize,Clone)]
+pub struct JWT {
+   pub secret: String,
+   pub expire: i32,
+   pub maxage: i32,
 }
 
 pub fn init(file: String) -> Config {

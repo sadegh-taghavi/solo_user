@@ -1,13 +1,17 @@
 use serde::Serialize;
 // use serde::Deserialize;
 
-use actix_web::get;
-use actix_web::Responder;
-use actix_web::HttpServer;
-use actix_web::App;
-use actix_web::HttpResponse;
+use actix_web::{Responder, get, web, App, HttpResponse, HttpServer};
 
 use chrono::prelude::Utc;
+
+use sqlx::{mysql::MySqlPool};
+
+#[derive(Clone)]
+struct AppState {
+    conf : super::config::Config,
+    dbp: sqlx::mysql::MySqlPool,
+}
 
 #[get("/api/v1/health")]
 async fn helth_handler() -> impl Responder {
@@ -43,8 +47,18 @@ async fn info_handler() -> impl Responder {
 
 #[actix_web::main]
 pub async fn init(conf : super::config::Config) -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new().service(helth_handler).service(info_handler)
+
+    let result = MySqlPool::connect(conf.db.datasource.as_str()).await;
+    if result.is_err() {
+        panic!("error connecting to db {}", result.as_ref().unwrap_err())
+    }
+    let app_state = web::Data::new(AppState { conf: conf.clone(), dbp: result.unwrap() });
+
+    HttpServer::new(move || {
+        App::new()
+        .app_data(app_state.clone())
+        .service(helth_handler)
+        .service(info_handler)
     })
     .bind(conf.server.address)?
     .run()

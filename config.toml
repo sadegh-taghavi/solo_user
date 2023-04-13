@@ -1,2 +1,10 @@
 [server]
 address = "0.0.0.0:8080"
+
+[db]
+datasource = "mysql://root:Copy0075421@yahoo@localhost/solo_user?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci"
+
+[jwt]
+secret = "ThIsIsAsEcr3t T!QAZX=TERCESASISIHS"
+expire = 14400
+maxage = 14400
