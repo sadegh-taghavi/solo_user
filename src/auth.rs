@@ -7,7 +7,8 @@ use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::Serialize;
 
 use crate::model::TokenClaims;
-use crate::AppState;
+
+#[path ="server.rs"]mod server;
 
 #[derive(Debug, Serialize)]
 struct ErrorResponse {
@@ -23,22 +24,20 @@ impl fmt::Display for ErrorResponse {
 
 pub struct JwtMiddleware {
     pub user_id: uuid::Uuid,
+    pub name: String,
+    pub email: String,
 }
 
 impl FromRequest for JwtMiddleware {
     type Error = ActixWebError;
     type Future = Ready<Result<Self, Self::Error>>;
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let data = req.app_data::<web::Data<AppState>>().unwrap();
+        let data = req.app_data::<web::Data<super::server::AppState>>().unwrap();
 
-        let token = req
-            .cookie("token")
-            .map(|c| c.value().to_string())
-            .or_else(|| {
+        let token =            
                 req.headers()
-                    .get(http::header::AUTHORIZATION)
-                    .map(|h| h.to_str().unwrap().split_at(7).1.to_string())
-            });
+                .get(http::header::AUTHORIZATION)
+                .map(|h| h.to_str().unwrap().split_at(7).1.to_string());
 
         if token.is_none() {
             let json_error = ErrorResponse {
@@ -50,7 +49,7 @@ impl FromRequest for JwtMiddleware {
 
         let claims = match decode::<TokenClaims>(
             &token.unwrap(),
-            &DecodingKey::from_secret(data.env.jwt_secret.as_ref()),
+            &DecodingKey::from_secret(data.jw),
             &Validation::default(),
         ) {
             Ok(c) => c.claims,
@@ -64,9 +63,12 @@ impl FromRequest for JwtMiddleware {
         };
 
         let user_id = uuid::Uuid::parse_str(claims.sub.as_str()).unwrap();
+        let email = uuid::Uuid::parse_str(claims.email.as_str()).unwrap();
+        let name = uuid::Uuid::parse_str(claims.name.as_str()).unwrap();
         req.extensions_mut()
-            .insert::<uuid::Uuid>(user_id.to_owned());
-
-        ready(Ok(JwtMiddleware { user_id }))
+            .insert::<uuid::Uuid>(user_id.to_owned())
+            .insert::<String>(email.to_owned())
+            .insert::<String>(name.to_owned());
+        ready(Ok(JwtMiddleware { user_id, name, email }))
     }
 }
