@@ -22,7 +22,8 @@ CREATE TABLE users (
 	password VARCHAR(64) NOT NULL,
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY ( id ),
-	CONSTRAINT UNIQUE ( email )
+	CONSTRAINT UNIQUE ( email ),
+	CONSTRAINT UNIQUE ( name )
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE INDEX idx_user_id ON users (user_id);

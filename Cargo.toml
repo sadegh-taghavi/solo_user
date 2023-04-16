@@ -14,7 +14,7 @@ serde_json = {version = "1.0.95" }
 toml = {version = "0.7.3" }
 actix-web = {version = "4.3.1" }
 argon2 = {version = "0.5.0" }
-jsonwebtoken = {version = "8.2.0" }
+jsonwebtoken = {version = "8.3.0" }
 rand_core = {version = "0.6.4", features = ["std"] }
 chrono = {version = "0.4.24", features = ["serde"] }
 sqlx = {version = "0.6.2", features = ["runtime-async-std-native-tls", "mysql", "chrono", "uuid"] }
