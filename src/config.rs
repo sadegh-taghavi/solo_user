@@ -5,6 +5,7 @@ pub struct Config {
    pub server: Server,
    pub db: DB,
    pub jwt: JWT,
+   pub email: Email,
 }
 
 #[derive(Debug, Deserialize,Clone)]
@@ -22,6 +23,14 @@ pub struct JWT {
    pub secret: String,
    pub expire: i32,
    pub maxage: i32,
+}
+
+#[derive(Debug, Deserialize,Clone)]
+pub struct Email {
+   pub server: String,
+   pub account: String,
+   pub domain: String,
+   pub pass: String,
 }
 
 pub fn init(file: String) -> Config {

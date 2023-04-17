@@ -1,8 +1,11 @@
 use jsonwebtoken::{encode, Header, EncodingKey};
+use lettre::transport::smtp::authentication::Credentials;
 use serde::{Serialize, Deserialize};
 use serde_json::json;
 use rand_core::{OsRng, RngCore};
 use bcrypt::{hash, verify};
+use lettre::{Message, SmtpTransport, Transport,Address};
+use lettre::message::{SinglePart, Mailbox};
 
 use actix_web::{Responder, get, web, App, HttpResponse, HttpServer};
 
@@ -50,7 +53,7 @@ pub async fn signup(signup_request: web::Json<SignupRequest>, state: web::Data<c
     .await;
    
     if result.is_err() {
-        warn!("error in query {}", result.as_ref().unwrap_err() );
+        error!("error in query {}", result.as_ref().unwrap_err() );
         return HttpResponse::InternalServerError().body("");
     }
     
@@ -63,7 +66,7 @@ pub async fn signup(signup_request: web::Json<SignupRequest>, state: web::Data<c
     .await;
    
     if result.is_err() {
-        warn!("error in query {}", result.as_ref().unwrap_err() );
+        error!("error in query {}", result.as_ref().unwrap_err() );
         return HttpResponse::InternalServerError().body("");
     }
     
@@ -90,7 +93,7 @@ pub async fn signup(signup_request: web::Json<SignupRequest>, state: web::Data<c
     let json_object = json!(req);
     let result = serde_json::to_string(&json_object);
     if result.is_err() {
-        warn!("error in serialize {}", result.as_ref().unwrap_err() );
+        error!("error in serialize {}", result.as_ref().unwrap_err() );
         return HttpResponse::InternalServerError().body("");
     }
 
@@ -102,11 +105,29 @@ pub async fn signup(signup_request: web::Json<SignupRequest>, state: web::Data<c
     .await;
 
     if result.is_err() {
-        warn!("error in insert {}", result.as_ref().unwrap_err() );
+        error!("error in insert {}", result.as_ref().unwrap_err() );
         return HttpResponse::InternalServerError().body("");
     }
 
-    HttpResponse::Ok().body("Verify email.")
+    let email = Message::builder()
+        .from(Mailbox::new(Option::None, Address::new(state.conf.email.account.clone(), state.conf.email.domain.clone()).unwrap()))
+        .to(req.email.parse().unwrap())
+        .subject("Verfication token")
+        .singlepart(SinglePart::html(("<p>This is your signup verfication token.</p>\n".to_owned() + token.to_owned().as_str()).as_bytes().to_vec()))
+        .unwrap();
+
+    let mailer = SmtpTransport::relay(state.conf.email.server.as_ref())
+        .unwrap()
+        .credentials(Credentials::new( "stc.5421@gmail.com".to_string(), "Copy0075421@yahoo".to_string()))
+        .build();
+
+    let result = mailer.send(&email);
+    if result.is_err() {
+        error!("error in send mail {}", result.as_ref().unwrap_err() );
+        return HttpResponse::InternalServerError().body("");
+    }
+
+    HttpResponse::Ok().body("Verify by email.")
 
 }
 
@@ -123,8 +144,8 @@ pub async fn verify_token(verify_request: web::Json<VerifyRequest>, state: web::
     // .await;
    
     // if result.is_err() {
-    //     warn!("error in query {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body(result.as_ref().unwrap_err());
+    //     error!("error in query {}", result.as_ref().unwrap_err() );
+    //     return HttpResponse::InternalServerError().body("");
     // }
     
     // if result.as_ref().unwrap().is_some() {
@@ -133,8 +154,8 @@ pub async fn verify_token(verify_request: web::Json<VerifyRequest>, state: web::
 
     // let result = serde_json::to_string(&json_object);
     // if result.is_err() {
-    //     warn!("error in serialize {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body(result.as_ref().unwrap_err());
+    //     error!("error in serialize {}", result.as_ref().unwrap_err() );
+    //     return HttpResponse::InternalServerError().body("");
     // }
 
 

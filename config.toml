@@ -8,3 +8,9 @@ datasource = "mysql://root:Copy0075421@yahoo@localhost/solo_user?parseTime=true&
 secret = "ThIsIsAsEcr3t T!QAZX=TERCESASISIHS"
 expire = 14400
 maxage = 14400
+
+[email]
+server = "smtp.gmail.com"
+account = "stc.5421"
+domain = "gmail.com"
+pass = "Copy0075421@yahoo"
