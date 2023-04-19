@@ -5,7 +5,7 @@ pub struct Config {
    pub server: Server,
    pub db: DB,
    pub jwt: JWT,
-   pub email: Email,
+   pub oauth: OAuth,
 }
 
 #[derive(Debug, Deserialize,Clone)]
@@ -26,11 +26,13 @@ pub struct JWT {
 }
 
 #[derive(Debug, Deserialize,Clone)]
-pub struct Email {
-   pub server: String,
-   pub account: String,
-   pub domain: String,
-   pub pass: String,
+pub struct OAuth {
+   pub googleclientid: String,
+   pub googleclientsecret: String,
+   pub authurl: String,
+   pub tokenurl: String,
+   pub revokationurl: String,
+   pub redirecturl: String,
 }
 
 pub fn init(file: String) -> Config {

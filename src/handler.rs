@@ -1,13 +1,19 @@
 use jsonwebtoken::{encode, Header, EncodingKey};
-use lettre::transport::smtp::authentication::Credentials;
 use serde::{Serialize, Deserialize};
 use serde_json::json;
 use rand_core::{OsRng, RngCore};
 use bcrypt::{hash, verify};
-use lettre::{Message, SmtpTransport, Transport,Address};
-use lettre::message::{SinglePart, Mailbox};
 
 use actix_web::{Responder, get, web, App, HttpResponse, HttpServer};
+
+use oauth2::{basic::BasicClient, revocation::StandardRevocableToken, TokenResponse};
+// Alternatively, this can be oauth2::curl::http_client or a custom.
+use oauth2::reqwest::http_client;
+use oauth2::{
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge, RedirectUrl,
+    RevocationUrl, Scope, TokenUrl,
+};
+use url::Url;
 
 use chrono::prelude::Utc;
 
@@ -109,23 +115,58 @@ pub async fn signup(signup_request: web::Json<SignupRequest>, state: web::Data<c
         return HttpResponse::InternalServerError().body("");
     }
 
-    let email = Message::builder()
-        .from(Mailbox::new(Option::None, Address::new(state.conf.email.account.clone(), state.conf.email.domain.clone()).unwrap()))
-        .to(req.email.parse().unwrap())
-        .subject("Verfication token")
-        .singlepart(SinglePart::html(("<p>This is your signup verfication token.</p>\n".to_owned() + token.to_owned().as_str()).as_bytes().to_vec()))
-        .unwrap();
-
-    let mailer = SmtpTransport::relay(state.conf.email.server.as_ref())
-        .unwrap()
-        .credentials(Credentials::new( "stc.5421@gmail.com".to_string(), "Copy0075421@yahoo".to_string()))
-        .build();
-
-    let result = mailer.send(&email);
-    if result.is_err() {
-        error!("error in send mail {}", result.as_ref().unwrap_err() );
+    let google_client_id = ClientId::new( state.conf.oauth.googleclientid);
+    
+    
+    let google_client_secret = ClientSecret::new( state.conf.oauth.googleclientsecret );
+       
+    let auth_url = AuthUrl::new(state.conf.oauth.authurl);
+    if auth_url.is_err() {
+        error!("error in auth {}", auth_url.as_ref().unwrap_err() );
         return HttpResponse::InternalServerError().body("");
     }
+    let token_url = TokenUrl::new(state.conf.oauth.tokenurl);
+    if token_url.is_err() {
+        error!("error in auth {}", token_url.as_ref().unwrap_err() );
+        return HttpResponse::InternalServerError().body("");
+    }
+    // Set up the config for the Google OAuth2 process.
+    let client = BasicClient::new(google_client_id, Some(google_client_secret), auth_url, Some(token_url))
+
+    // This example will be running its own server at localhost:8080.
+    // See below for the server implementation.
+    .set_redirect_uri(
+        RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
+    )
+    // Google supports OAuth 2.0 Token Revocation (RFC-7009)
+    .set_revocation_uri(
+        RevocationUrl::new("https://oauth2.googleapis.com/revoke".to_string())
+            .expect("Invalid revocation endpoint URL"),
+    );
+
+    // Google supports Proof Key for Code Exchange (PKCE - https://oauth.net/2/pkce/).
+    // Create a PKCE code verifier and SHA-256 encode it as a code challenge.
+    let (pkce_code_challenge, pkce_code_verifier) = PkceCodeChallenge::new_random_sha256();
+
+    // Generate the authorization URL to which we'll redirect the user.
+    let (authorize_url, csrf_state) = client
+        .authorize_url(CsrfToken::new_random)
+        // This example is requesting access to the "calendar" features and the user's profile.
+        .add_scope(Scope::new(
+            "https://www.googleapis.com/auth/calendar".to_string(),
+        ))
+        .add_scope(Scope::new(
+            "https://www.googleapis.com/auth/plus.me".to_string(),
+        ))
+        .set_pkce_challenge(pkce_code_challenge)
+        .url();
+
+    println!(
+        "Open this URL in your browser:\n{}\n",
+        authorize_url.to_string()
+    );
+
+
 
     HttpResponse::Ok().body("Verify by email.")
 
