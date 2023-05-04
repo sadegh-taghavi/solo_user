@@ -15,7 +15,7 @@ pub struct Server {
 
 #[derive(Debug, Deserialize,Clone)]
 pub struct DB {
-   pub datasource: String,
+   pub data_source: String,
 }
 
 #[derive(Debug, Deserialize,Clone)]
@@ -27,12 +27,14 @@ pub struct JWT {
 
 #[derive(Debug, Deserialize,Clone)]
 pub struct OAuth {
-   pub googleclientid: String,
-   pub googleclientsecret: String,
-   pub authurl: String,
-   pub tokenurl: String,
-   pub revokationurl: String,
-   pub redirecturl: String,
+   pub verify_url: String,
+   pub google_client_id: String,
+   pub google_client_secret: String,
+   pub auth_url: String,
+   pub token_url: String,
+   pub revokation_url: String,
+   pub redirect_url: String,
+   pub userinfo_url: String,
 }
 
 pub fn init(file: String) -> Config {

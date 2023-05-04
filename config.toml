@@ -2,7 +2,7 @@
 address = "0.0.0.0:8080"
 
 [db]
-datasource = "mysql://root:Copy0075421@yahoo@localhost/solo_user?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci"
+data_source = "mysql://root:Copy0075421@yahoo@localhost/solo_user?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci"
 
 [jwt]
 secret = "ThIsIsAsEcr3t T!QAZX=TERCESASISIHS"
@@ -10,12 +10,11 @@ expire = 14400
 maxage = 14400
 
 [oauth]
-googleclientid = "312965750022-d9air1rr925n2jpcn4r9552lbdcfg6mb.apps.googleusercontent.com"
-googleclientsecret = "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"
-authurl = "https://accounts.google.com/o/oauth2/v2/auth"
-tokenurl = "https://www.googleapis.com/oauth2/v3/token"
-tokenurl = "https://www.googleapis.com/oauth2/v3/token"
-tokenurl = "https://www.googleapis.com/oauth2/v3/token"
-revokationurl = "https://oauth2.googleapis.com/revoke"
-redirecturl = "http://127.0.0.1:8080/api/v1/verify"
-
+verify_url = "http://127.0.0.1:8080/api/v1/verify"
+google_client_id = "312965750022-d9air1rr925n2jpcn4r9552lbdcfg6mb.apps.googleusercontent.com"
+google_client_secret = "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"
+auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
+token_url = "https://www.googleapis.com/oauth2/v3/token"
+revokation_url = "https://oauth2.googleapis.com/revoke"
+redirect_url = "http://127.0.0.1:8080/api/v1/verify"
+userinfo_url ="https://www.googleapis.com/oauth2/v1/userinfo"

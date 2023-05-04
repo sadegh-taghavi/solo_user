@@ -10,7 +10,7 @@ pub struct AppState {
 }
 #[actix_web::main]
 pub async fn init(conf : super::config::Config) -> std::io::Result<()> {
-    let result = MySqlPool::connect(conf.db.datasource.as_str()).await;
+    let result = MySqlPool::connect(conf.db.data_source.as_str()).await;
     if result.is_err() {
         panic!("error connecting to db {}", result.as_ref().unwrap_err())
     }
@@ -22,7 +22,7 @@ pub async fn init(conf : super::config::Config) -> std::io::Result<()> {
         .route("/api/v1/health", web::get().to(handler::helth))
         .route("/api/v1/info", web::get().to(handler::info))
         .route("/api/v1/signup", web::post().to(handler::signup))
-        .route("/api/v1/verify", web::post().to(handler::verify_token))
+        .route("/api/v1/verify", web::get().to(handler::verify_token))
     })
     .bind(conf.server.address)?
     .run()
