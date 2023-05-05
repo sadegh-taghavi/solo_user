@@ -5,7 +5,7 @@ use rand_core::{OsRng, RngCore};
 use bcrypt::{hash, verify};
 
 use actix_web::{Responder, get, web, App, HttpResponse, HttpServer};
-use awc::Client;
+use reqwest::{Client, Url};
 
 use oauth2::{basic::BasicClient, basic::BasicTokenType, revocation::StandardRevocableToken, TokenResponse};
 // Alternatively, this can be oauth2::curl::http_client or a custom.
@@ -15,9 +15,10 @@ use oauth2::{
     RevocationUrl, Scope, TokenUrl,
     reqwest::async_http_client,
 };
-use url::Url;
 
 use chrono::prelude::Utc;
+
+use super::AppState;
 
 pub async fn helth() -> impl Responder {
     #[derive(Debug, Serialize)]
@@ -199,20 +200,24 @@ pub async fn verify_token(query: web::Query<VerifyQuery>, app_state: web::Data<c
     }else {
         let token = token_res.unwrap();
         let bearer = token.access_token().secret();
-        let mut client = awc::Client::default();
-            let response = client.get(app_state.conf.oauth.userinfo_url.clone()) // <- Create request builder
-                .insert_header(( "Authorization", format!("Bearer {}", bearer.clone())))
-                .send()                                            
-                .await;
+        let client = Client::new();
+    let mut url = Url::parse(app_state.conf.oauth.userinfo_url.clone().as_str()).unwrap();
+    // url.query_pairs_mut().append_pair("alt", "json");
+    // url.query_pairs_mut()
+    //     .append_pair("access_token", bearer);
+
+    let response = client.get(url).bearer_auth(bearer).send().await;
+
             if response.is_err() {
                 return HttpResponse::BadRequest().body( format!("response {:#?}", response.err()))    
             }
-            let userinfo = response.unwrap().json::<UserInfo>().await;
-            if userinfo.is_err() {
-                return HttpResponse::BadRequest().body("userinfo")          
-            }else {
-                return HttpResponse::Ok().json(userinfo.unwrap());
-            }
+            return HttpResponse::Ok().body(response.unwrap().text().await.unwrap());
+            // let userinfo = response.unwrap().json::<UserInfo>().await;
+            // if userinfo.is_err() {
+            //     return HttpResponse::BadRequest().body("userinfo")          
+            // }else {
+            //     return HttpResponse::Ok().json(userinfo.unwrap());
+            // }
     }
 
 }
