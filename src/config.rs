@@ -21,8 +21,8 @@ pub struct DB {
 #[derive(Debug, Deserialize,Clone)]
 pub struct JWT {
    pub secret: String,
-   pub expire: i32,
-   pub maxage: i32,
+   pub expire: i64,
+   pub maxage: i64,
 }
 
 #[derive(Debug, Deserialize,Clone)]
