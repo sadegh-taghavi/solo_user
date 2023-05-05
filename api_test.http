@@ -9,12 +9,6 @@
  Content-Type: application/json
 
 ####
-Post http://127.0.0.1:8080/api/v1/signup
+Post http://127.0.0.1:8080/api/v1/login
 Content-Type: application/json
 # Authorization: Bearer eyJhbGc
-
-{
-    "email": "stc.5421@gmail.com",
-    "name": "sadegh",
-    "password": "123456"
-}

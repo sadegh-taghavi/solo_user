@@ -63,7 +63,7 @@ fn google_client(app_state: web::Data<crate::server::AppState>) -> BasicClient {
     .set_revocation_uri(RevocationUrl::new(app_state.conf.oauth.revokation_url.clone()).unwrap())
 }
 
-pub async fn signup(/*signup_request: web::Json<SignupRequest>,*/ app_state: web::Data<crate::server::AppState>) -> impl Responder {  
+pub async fn login(/*signup_request: web::Json<SignupRequest>,*/ app_state: web::Data<crate::server::AppState>) -> impl Responder {  
 
     // let result = sqlx::query!("SELECT email FROM users WHERE email = ?", signup_request.email)
     // .fetch_optional(&state.dbp)
@@ -151,8 +151,8 @@ pub async fn signup(/*signup_request: web::Json<SignupRequest>,*/ app_state: web
 
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 struct UserInfo {
-    email: String,
-    name: String,
+    id: String,
+    picture: String,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
@@ -198,26 +198,20 @@ pub async fn verify_token(query: web::Query<VerifyQuery>, app_state: web::Data<c
     if token_res.is_err() {
         return HttpResponse::BadRequest().body("token_res")
     }else {
-        let token = token_res.unwrap();
-        let bearer = token.access_token().secret();
         let client = Client::new();
-    let mut url = Url::parse(app_state.conf.oauth.userinfo_url.clone().as_str()).unwrap();
-    // url.query_pairs_mut().append_pair("alt", "json");
-    // url.query_pairs_mut()
-    //     .append_pair("access_token", bearer);
+        let url = Url::parse(app_state.conf.oauth.userinfo_url.clone().as_str()).unwrap();
+        let response = client.get(url).bearer_auth(token_res.unwrap().access_token().secret().clone()).send().await;
 
-    let response = client.get(url).bearer_auth(bearer).send().await;
-
-            if response.is_err() {
-                return HttpResponse::BadRequest().body( format!("response {:#?}", response.err()))    
-            }
-            return HttpResponse::Ok().body(response.unwrap().text().await.unwrap());
-            // let userinfo = response.unwrap().json::<UserInfo>().await;
-            // if userinfo.is_err() {
-            //     return HttpResponse::BadRequest().body("userinfo")          
-            // }else {
-            //     return HttpResponse::Ok().json(userinfo.unwrap());
-            // }
+        if response.is_err() {
+            return HttpResponse::BadRequest().body( format!("response {:#?}", response.err()))    
+        }
+       
+        let userinfo: Result<UserInfo, serde_json::Error> = serde_json::from_str(response.unwrap().text().await.unwrap().as_str());
+        if userinfo.is_err() {
+            return HttpResponse::BadRequest().body("userinfo")          
+        }else {
+            return HttpResponse::Ok().json(userinfo.unwrap());
+        }
     }
 
 }
