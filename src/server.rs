@@ -23,6 +23,7 @@ pub async fn init(conf : super::config::Config) -> std::io::Result<()> {
         .route("/api/v1/info", web::get().to(handler::info))
         .route("/api/v1/login", web::post().to(handler::login))
         .route("/api/v1/verify", web::get().to(handler::verify_token))
+        .route("/api/v1/profile", web::get().to(handler::get_profile))
         .route("/api/v1/profile", web::put().to(handler::set_profile))
     })
     .bind(conf.server.address)?

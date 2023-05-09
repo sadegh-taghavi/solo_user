@@ -27,3 +27,15 @@ pub struct TokenClaims {
     pub iat: i64,
     pub exp: i64,
 }
+
+#[derive(serde::Deserialize, serde::Serialize, sqlx::FromRow, Clone)]
+pub struct ProfileInfo {
+    pub uuid: String,
+    pub email: String,
+    pub name: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+pub struct ProfileRequest {
+    pub name: String,
+}

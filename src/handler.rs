@@ -16,6 +16,8 @@ use oauth2::{
 use chrono::Duration;
 use chrono::prelude::Utc;
 
+use crate::model::ProfileInfo;
+
 pub async fn helth() -> impl Responder {
     #[derive(Debug, Serialize)]
     struct Health {
@@ -52,68 +54,18 @@ fn google_client(app_state: web::Data<crate::server::AppState>) -> BasicClient {
     .set_revocation_uri(RevocationUrl::new(app_state.conf.oauth.revokation_url.clone()).unwrap())
 }
 
-pub async fn login(/*signup_request: web::Json<SignupRequest>,*/ app_state: web::Data<crate::server::AppState>) -> impl Responder {  
+fn generate_token(profile: ProfileInfo, app_state: web::Data<crate::server::AppState>) -> String {
+    let my_claims = crate::model::TokenClaims {
+        sub: profile.uuid.clone(),
+        name: profile.name.clone(),
+        email: profile.email.clone(),
+        iat: Utc::now().checked_sub_signed(Duration::minutes(10)).unwrap().timestamp(),
+        exp: Utc::now().checked_add_signed(Duration::minutes(app_state.conf.jwt.expire.clone())).unwrap().timestamp(),
+    };
+    encode(&Header::default(), &my_claims, &EncodingKey::from_secret(app_state.conf.jwt.secret.as_ref())).unwrap()
+}
 
-    // let result = sqlx::query!("SELECT email FROM users WHERE email = ?", signup_request.email)
-    // .fetch_optional(&state.dbp)
-    // .await;
-   
-    // if result.is_err() {
-    //     error!("error in query {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body("");
-    // }
-    
-    // if result.as_ref().unwrap().is_some() {
-    //     return HttpResponse::BadRequest().body("Email already exists");
-    // }
-
-    // let result = sqlx::query!("SELECT name FROM users WHERE name = ?", signup_request.name)
-    // .fetch_optional(&state.dbp)
-    // .await;
-   
-    // if result.is_err() {
-    //     error!("error in query {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body("");
-    // }
-    
-    // if result.as_ref().unwrap().is_some() {
-    //     return HttpResponse::BadRequest().body("Name already taken");
-    // }
-
-    // let mut rng = OsRng;
-    // let mut bytes = [0u8; 10];
-    // rng.fill_bytes(&mut bytes);
-    // let token: String = bytes
-    //     .iter()
-    //     .map(|b| char::from_digit((b % 10) as u32, 10).unwrap())
-    //     .collect();
-
-    // let hashed_password = hash(signup_request.password.clone(), 10).unwrap();
-
-    // let req = SignupRequest {
-    //     email:signup_request.email.clone(),
-    //     name: signup_request.name.clone(),
-    //     password: hashed_password,
-    // };
-
-    // let json_object = json!(req);
-    // let result = serde_json::to_string(&json_object);
-    // if result.is_err() {
-    //     error!("error in serialize {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body("");
-    // }
-
-    // let result = sqlx::query!(
-    //     "INSERT INTO verify (token, data) VALUES (?, ?)",
-    //     token, result.unwrap()
-    // )
-    // .execute(&state.dbp)
-    // .await;
-
-    // if result.is_err() {
-    //     error!("error in insert {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body("");
-    // }
+pub async fn login(app_state: web::Data<crate::server::AppState>) -> impl Responder {  
 
     let (authorize_url, _)= google_client(app_state.clone())
     .authorize_url(CsrfToken::new_random)
@@ -158,15 +110,9 @@ pub async fn verify_token(query: web::Query<crate::model::VerifyQuery>, app_stat
             return HttpResponse::InternalServerError().body("userinfo")          
         }else {
 
-            #[derive(serde::Deserialize, serde::Serialize, sqlx::FromRow, Clone)]
-            struct User {
-                uuid: String,
-                email: String,
-                name: String,
-            }
-
+          
             let userinfo = result.unwrap();
-            let result = sqlx::query_as::<_, User>("SELECT uuid, email, name FROM users WHERE email = ?").bind(userinfo.id.clone())
+            let result = sqlx::query_as::<_, crate::model::ProfileInfo>("SELECT uuid, email, name FROM users WHERE email = ?").bind(userinfo.id.clone())
             .fetch_all(&app_state.dbp)
             .await;
             if result.is_err() {
@@ -174,20 +120,20 @@ pub async fn verify_token(query: web::Query<crate::model::VerifyQuery>, app_stat
                 return HttpResponse::InternalServerError().body("");
             }
     
-            let mut user = User{
+            let mut profile = crate::model::ProfileInfo{
                 uuid:String::from(""),
                 email: String::from(""),
                 name:String::from(""),
             };
             if result.as_ref().unwrap().len() > 0 {
-                user = result.as_ref().unwrap().first().unwrap().clone();
+                profile = result.as_ref().unwrap().first().unwrap().clone();
             }else {
-                user.email = userinfo.id.clone();
-                user.name = userinfo.id.clone();
-                user.uuid = Uuid::new_v4().to_string();
+                profile.email = userinfo.id.clone();
+                profile.name = userinfo.id.clone();
+                profile.uuid = Uuid::new_v4().to_string();
 
 
-                let result = sqlx::query!( "INSERT INTO users (uuid, email, name) VALUES (?, ?, ?)", user.uuid, user.email, user.name)
+                let result = sqlx::query!( "INSERT INTO users (uuid, email, name) VALUES (?, ?, ?)", profile.uuid, profile.email, profile.name)
                 .execute(&app_state.dbp)
                 .await;
 
@@ -197,97 +143,75 @@ pub async fn verify_token(query: web::Query<crate::model::VerifyQuery>, app_stat
                 }
             }
             
-            let my_claims = crate::model::TokenClaims {
-                sub: user.uuid.clone(),
-                name: user.name.clone(),
-                email: user.email.clone(),
-                iat: Utc::now().checked_sub_signed(Duration::minutes(10)).unwrap().timestamp(),
-                exp: Utc::now().checked_add_signed(Duration::minutes(app_state.conf.jwt.expire.clone())).unwrap().timestamp(),
-            };
-            let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret(app_state.conf.jwt.secret.as_ref())).unwrap();
-
-           return HttpResponse::Ok().body(token);
+           return HttpResponse::Ok().body(generate_token( profile, app_state ));
         }
     }
 
 }
 
 
-pub async fn set_profile(req: HttpRequest,/*signup_request: web::Json<SignupRequest>,*/ app_state: web::Data<crate::server::AppState>, claims: crate::model::TokenClaims) -> impl Responder {  
+pub async fn get_profile(/*req: HttpRequest,*/ app_state: web::Data<crate::server::AppState>, claims: crate::model::TokenClaims) -> impl Responder {  
 
-    // let result = sqlx::query!("SELECT email FROM users WHERE email = ?", signup_request.email)
-    // .fetch_optional(&state.dbp)
-    // .await;
-   
-    // if result.is_err() {
-    //     error!("error in query {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body("");
-    // }
+   let result = sqlx::query_as::<_, crate::model::ProfileInfo>("SELECT uuid, email, name FROM users WHERE uuid = ?").bind(claims.sub.clone())
+            .fetch_all(&app_state.dbp)
+            .await;
+            if result.is_err() {
+                error!("error in query {}", result.as_ref().err().unwrap() );
+                return HttpResponse::InternalServerError().body("");
+            }
     
-    // if result.as_ref().unwrap().is_some() {
-    //     return HttpResponse::BadRequest().body("Email already exists");
-    // }
+    let mut profile = crate::model::ProfileInfo{
+        uuid:String::from(""),
+        email: String::from(""),
+        name:String::from(""),
+    };
+    if result.as_ref().unwrap().len() > 0 {
+        profile = result.as_ref().unwrap().first().unwrap().clone();
+    }
+    HttpResponse::Ok().json(profile)   
+}
 
-    // let result = sqlx::query!("SELECT name FROM users WHERE name = ?", signup_request.name)
-    // .fetch_optional(&state.dbp)
-    // .await;
-   
-    // if result.is_err() {
-    //     error!("error in query {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body("");
-    // }
-    
-    // if result.as_ref().unwrap().is_some() {
-    //     return HttpResponse::BadRequest().body("Name already taken");
-    // }
+pub async fn set_profile(/*req: HttpRequest,*/profile_request: web::Json<crate::model::ProfileRequest>, app_state: web::Data<crate::server::AppState>, claims: crate::model::TokenClaims) -> impl Responder {  
 
-    // let mut rng = OsRng;
-    // let mut bytes = [0u8; 10];
-    // rng.fill_bytes(&mut bytes);
-    // let token: String = bytes
-    //     .iter()
-    //     .map(|b| char::from_digit((b % 10) as u32, 10).unwrap())
-    //     .collect();
+    let result = sqlx::query!("SELECT name FROM users WHERE name = ? and uuid != ?", profile_request.name, claims.sub)
+    .fetch_optional(&app_state.dbp)
+    .await;
 
-    // let hashed_password = hash(signup_request.password.clone(), 10).unwrap();
-
-    // let req = SignupRequest {
-    //     email:signup_request.email.clone(),
-    //     name: signup_request.name.clone(),
-    //     password: hashed_password,
-    // };
-
-    // let json_object = json!(req);
-    // let result = serde_json::to_string(&json_object);
-    // if result.is_err() {
-    //     error!("error in serialize {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body("");
-    // }
-
-    // let result = sqlx::query!(
-    //     "INSERT INTO verify (token, data) VALUES (?, ?)",
-    //     token, result.unwrap()
-    // )
-    // .execute(&state.dbp)
-    // .await;
-
-    // if result.is_err() {
-    //     error!("error in insert {}", result.as_ref().unwrap_err() );
-    //     return HttpResponse::InternalServerError().body("");
-    // }
-
-    // let (authorize_url, _)= google_client(app_state.clone())
-    // .authorize_url(CsrfToken::new_random)
-    // .add_scope(Scope::new( "https://www.googleapis.com/auth/plus.me".to_string()))
-    // .url();
-
-    #[derive(Debug, Serialize)]
-    struct SignupResponse {
-        url: String,
+    if result.is_err() {
+        error!("error in query {}", result.as_ref().unwrap_err() );
+        return HttpResponse::InternalServerError().body("");
     }
 
-    HttpResponse::Ok().json(SignupResponse {
-        url: claims.email,
-    })   
+    if result.as_ref().unwrap().is_some() {
+        return HttpResponse::BadRequest().body("Name already taken");
+    }
+
+    let result = sqlx::query!( "update users set name = ? where uuid = ?", profile_request.name, claims.sub)
+    .execute(&app_state.dbp)
+    .await;
+
+    if result.is_err() {
+        error!("error in insert {}", result.as_ref().unwrap_err() );
+        return HttpResponse::InternalServerError().body("");
+    }
+
+    let result = sqlx::query_as::<_, crate::model::ProfileInfo>("SELECT uuid, email, name FROM users WHERE uuid = ?").bind(claims.sub.clone())
+            .fetch_all(&app_state.dbp)
+            .await;
+            if result.is_err() {
+                error!("error in query {}", result.as_ref().err().unwrap() );
+                return HttpResponse::InternalServerError().body("");
+            }
+    
+    let mut profile = crate::model::ProfileInfo{
+        uuid:String::from(""),
+        email: String::from(""),
+        name:String::from(""),
+    };
+    if result.as_ref().unwrap().len() > 0 {
+        profile = result.as_ref().unwrap().first().unwrap().clone();
+    }  
+
+    return HttpResponse::Ok().body(generate_token( profile, app_state ));
 
 }
