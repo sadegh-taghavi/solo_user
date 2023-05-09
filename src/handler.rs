@@ -213,9 +213,8 @@ pub async fn verify_token(query: web::Query<crate::model::VerifyQuery>, app_stat
 }
 
 
-pub async fn set_profile(req: HttpRequest,/*signup_request: web::Json<SignupRequest>,*/ app_state: web::Data<crate::server::AppState>, claim: crate::model::TokenClaims) -> impl Responder {  
+pub async fn set_profile(req: HttpRequest,/*signup_request: web::Json<SignupRequest>,*/ app_state: web::Data<crate::server::AppState>, claims: crate::model::TokenClaims) -> impl Responder {  
 
-    
     // let result = sqlx::query!("SELECT email FROM users WHERE email = ?", signup_request.email)
     // .fetch_optional(&state.dbp)
     // .await;
@@ -288,7 +287,7 @@ pub async fn set_profile(req: HttpRequest,/*signup_request: web::Json<SignupRequ
     }
 
     HttpResponse::Ok().json(SignupResponse {
-        url: claim.email,
+        url: claims.email,
     })   
 
 }
