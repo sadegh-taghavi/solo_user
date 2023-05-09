@@ -1,26 +1,20 @@
 use jsonwebtoken::{encode, Header, EncodingKey};
-use serde::{Serialize, Deserialize};
-use serde_json::json;
-use rand_core::{OsRng, RngCore};
-use bcrypt::{hash, verify};
+use serde::{Serialize};
 use uuid::Uuid;
 
-use actix_web::{Responder, get, web, App, HttpResponse, HttpServer};
+use actix_web::{Responder, web, HttpResponse, HttpRequest, HttpMessage};
 use reqwest::{Client, Url};
 
-use oauth2::{basic::BasicClient, basic::BasicTokenType, revocation::StandardRevocableToken, TokenResponse};
+use oauth2::{basic::BasicClient, TokenResponse};
 // Alternatively, this can be oauth2::curl::http_client or a custom.
-use oauth2::reqwest::http_client;
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge, RedirectUrl,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl,
     RevocationUrl, Scope, TokenUrl,
     reqwest::async_http_client,
 };
 
-use chrono::{Days, Duration};
+use chrono::Duration;
 use chrono::prelude::Utc;
-
-use super::AppState;
 
 pub async fn helth() -> impl Responder {
     #[derive(Debug, Serialize)]
@@ -47,13 +41,6 @@ pub async fn info() -> impl Responder {
         time: Utc::now().to_string(),
     })
 }
-
-// #[derive(serde::Deserialize, serde::Serialize)]
-// pub struct SignupRequest {
-//     email: String,
-//     name: String,
-//     password: String,
-// }
 
 fn google_client(app_state: web::Data<crate::server::AppState>) -> BasicClient {
     let google_client_id = ClientId::new( app_state.conf.oauth.google_client_id.clone());   
@@ -145,20 +132,7 @@ pub async fn login(/*signup_request: web::Json<SignupRequest>,*/ app_state: web:
 }
 
 
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
-struct UserInfo {
-    id: String,
-    picture: String,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
-pub struct VerifyQuery {
-    state: String,
-    code: String,
-    scope: String,
-}
-
-pub async fn verify_token(query: web::Query<VerifyQuery>, app_state: web::Data<crate::server::AppState>) -> impl Responder {  
+pub async fn verify_token(query: web::Query<crate::model::VerifyQuery>, app_state: web::Data<crate::server::AppState>) -> impl Responder {  
 
     let client = google_client(app_state.clone());
     let token_res = client.exchange_code(AuthorizationCode::new(query.code.clone()))
@@ -178,7 +152,7 @@ pub async fn verify_token(query: web::Query<VerifyQuery>, app_state: web::Data<c
             return HttpResponse::InternalServerError().body( format!("response {:#?}", response.err()))    
         }
        
-        let result: Result<UserInfo, serde_json::Error> = serde_json::from_str(response.unwrap().text().await.unwrap().as_str());
+        let result: Result<crate::model::UserInfo, serde_json::Error> = serde_json::from_str(response.unwrap().text().await.unwrap().as_str());
         if result.is_err() {
             error!("error in query {}", result.err().unwrap() );
             return HttpResponse::InternalServerError().body("userinfo")          
@@ -223,16 +197,7 @@ pub async fn verify_token(query: web::Query<VerifyQuery>, app_state: web::Data<c
                 }
             }
             
-            #[derive(Debug, Serialize, Deserialize)]
-            struct Claims {
-                sub: String,
-                name: String,
-                email: String,
-                iat: i64,
-                exp: i64,
-            }
-
-            let my_claims = Claims {
+            let my_claims = crate::model::TokenClaims {
                 sub: user.uuid.clone(),
                 name: user.name.clone(),
                 email: user.email.clone(),
@@ -248,8 +213,9 @@ pub async fn verify_token(query: web::Query<VerifyQuery>, app_state: web::Data<c
 }
 
 
-pub async fn set_profile(/*signup_request: web::Json<SignupRequest>,*/ app_state: web::Data<crate::server::AppState>) -> impl Responder {  
+pub async fn set_profile(req: HttpRequest,/*signup_request: web::Json<SignupRequest>,*/ app_state: web::Data<crate::server::AppState>, claim: crate::model::TokenClaims) -> impl Responder {  
 
+    
     // let result = sqlx::query!("SELECT email FROM users WHERE email = ?", signup_request.email)
     // .fetch_optional(&state.dbp)
     // .await;
@@ -311,10 +277,10 @@ pub async fn set_profile(/*signup_request: web::Json<SignupRequest>,*/ app_state
     //     return HttpResponse::InternalServerError().body("");
     // }
 
-    let (authorize_url, _)= google_client(app_state.clone())
-    .authorize_url(CsrfToken::new_random)
-    .add_scope(Scope::new( "https://www.googleapis.com/auth/plus.me".to_string()))
-    .url();
+    // let (authorize_url, _)= google_client(app_state.clone())
+    // .authorize_url(CsrfToken::new_random)
+    // .add_scope(Scope::new( "https://www.googleapis.com/auth/plus.me".to_string()))
+    // .url();
 
     #[derive(Debug, Serialize)]
     struct SignupResponse {
@@ -322,7 +288,7 @@ pub async fn set_profile(/*signup_request: web::Json<SignupRequest>,*/ app_state
     }
 
     HttpResponse::Ok().json(SignupResponse {
-        url: authorize_url.to_string(),
+        url: claim.email,
     })   
 
 }

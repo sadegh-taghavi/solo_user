@@ -1,12 +1,12 @@
 use sqlx::mysql::MySqlPool;
 
 use actix_web::{web, App, HttpServer};
-#[path ="handler.rs"] mod handler;
+use crate::handler;
 
 #[derive(Clone)]
 pub struct AppState {
-    conf : super::config::Config,
-    dbp: sqlx::mysql::MySqlPool,
+    pub conf : super::config::Config,
+    pub dbp: sqlx::mysql::MySqlPool,
 }
 #[actix_web::main]
 pub async fn init(conf : super::config::Config) -> std::io::Result<()> {

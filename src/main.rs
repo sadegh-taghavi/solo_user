@@ -4,7 +4,10 @@ use env_logger::Env;
 
 mod config;
 mod server;
-mod auth;
+mod service;
+mod jwt;
+mod model;
+mod handler;
 use clap::Parser;
 
 #[derive(Debug, Parser)]
