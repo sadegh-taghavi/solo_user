@@ -18,6 +18,8 @@ use chrono::prelude::Utc;
 
 use crate::model::ProfileInfo;
 
+use redis::Commands;
+
 pub async fn helth() -> impl Responder {
     #[derive(Debug, Serialize)]
     struct Health {
@@ -67,19 +69,23 @@ fn generate_token(profile: ProfileInfo, app_state: web::Data<crate::server::AppS
 
 pub async fn login(app_state: web::Data<crate::server::AppState>) -> impl Responder {  
 
-    let (authorize_url, _)= google_client(app_state.clone())
+    let (authorize_url, csrf_token)= google_client(app_state.clone())
     .authorize_url(CsrfToken::new_random)
     .add_scope(Scope::new( "https://www.googleapis.com/auth/plus.me".to_string()))
     .url();
 
     #[derive(Debug, Serialize)]
     struct SignupResponse {
+        refid: String,
         url: String,
     }
-
+    
+    let csrf_token_string = serde_json::to_string_pretty(&csrf_token).unwrap();
+    
     HttpResponse::Ok().json(SignupResponse {
+        refid: csrf_token_string.replace("\"", ""),
         url: authorize_url.to_string(),
-    })   
+    })
 
 }
 
@@ -142,10 +148,41 @@ pub async fn verify_token(query: web::Query<crate::model::VerifyQuery>, app_stat
                     return HttpResponse::InternalServerError().body("");
                 }
             }
-            
-           return HttpResponse::Ok().body(generate_token( profile, app_state ));
+
+            let result: Result<(), redis::RedisError> = app_state.redis.write().unwrap().set_ex( query.state.clone(), generate_token(profile, app_state.clone()),
+             app_state.clone().conf.redis.token_retrive_timeout_secound.try_into().unwrap() );
+            if result.is_err() {
+                format!("response {:#?}", result.as_ref().err().unwrap() );
+                return HttpResponse::InternalServerError().body("redis set")
+            }
+
+            return HttpResponse::Ok().body("You are in! Please back to the app.");
         }
     }
+
+}
+
+
+pub async fn get_token(query: web::Query<crate::model::TokenQuery>, app_state: web::Data<crate::server::AppState>) -> impl Responder {  
+
+    if query.refid.is_empty() {
+        return HttpResponse::BadRequest().body("ref is empty")
+    }else {
+            let result: Result<Option<String>, redis::RedisError> = app_state.redis.write().unwrap().get( query.refid.clone());
+            if result.is_err() {
+                format!("response {:#?}", result.as_ref().err().unwrap() );
+                return HttpResponse::BadRequest().body("redis get")
+            }
+
+            let token = match result.unwrap() {
+                Some(t) => t,
+                None => {
+                    return HttpResponse::BadRequest().body("ref not found");
+                }
+            };
+
+            return HttpResponse::Ok().body( token );
+        }
 
 }
 

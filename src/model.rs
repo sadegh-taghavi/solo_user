@@ -19,6 +19,11 @@ pub struct VerifyQuery {
     pub scope: String,
 }
 
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+pub struct TokenQuery {
+    pub refid: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenClaims {
     pub sub: String,

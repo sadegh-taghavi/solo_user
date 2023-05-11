@@ -3,6 +3,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
    pub server: Server,
+   pub redis: Redis,
    pub db: DB,
    pub jwt: JWT,
    pub oauth: OAuth,
@@ -11,6 +12,12 @@ pub struct Config {
 #[derive(Debug, Deserialize,Clone)]
 pub struct Server {
    pub address: String,
+}
+
+#[derive(Debug, Deserialize,Clone)]
+pub struct Redis {
+   pub address: String,
+   pub token_retrive_timeout_secound: i64,
 }
 
 #[derive(Debug, Deserialize,Clone)]

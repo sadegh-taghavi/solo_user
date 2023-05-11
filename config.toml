@@ -1,6 +1,10 @@
 [server]
 address = "0.0.0.0:8080"
 
+[redis]
+address = "redis://20.0.0.229/"
+token_retrive_timeout_secound = 60
+
 [db]
 data_source = "mysql://root:Copy0075421@yahoo@localhost/solo_user?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci"
 
