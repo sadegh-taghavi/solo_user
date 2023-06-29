@@ -2,7 +2,7 @@ use jsonwebtoken::{encode, Header, EncodingKey};
 use serde::{Serialize};
 use uuid::Uuid;
 
-use actix_web::{Responder, web, HttpResponse, HttpRequest, HttpMessage};
+use actix_web::{Responder, web, HttpResponse};
 use reqwest::{Client, Url};
 
 use oauth2::{basic::BasicClient, TokenResponse};
