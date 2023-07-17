@@ -1,3 +1,3 @@
 # solo_user
 
-User authentication service and profile 
+User authentication and profile manager service

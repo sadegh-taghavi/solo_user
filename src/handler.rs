@@ -22,7 +22,7 @@ pub async fn info() -> impl Responder {
     }
 
     HttpResponse::Ok().json(Info {
-        info: "user authentication service".to_string(),
+        info: "User authentication and profile manager service".to_string(),
         version: "0.0.1".to_string(),
         time: Utc::now().to_string(),
     })
