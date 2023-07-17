@@ -44,3 +44,9 @@ pub struct ProfileInfo {
 pub struct ProfileRequest {
     pub name: String,
 }
+
+#[derive(Debug, Serialize)]
+pub struct SignupResponse {
+    pub refid: String,
+    pub url: String,
+}

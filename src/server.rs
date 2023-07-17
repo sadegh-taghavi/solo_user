@@ -35,7 +35,7 @@ pub async fn init(conf : super::config::Config) -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
         .app_data(app_state.clone())
-        .route("/api/v1/health", web::get().to(handler::helth))
+        .route("/api/v1/health", web::get().to(handler::health))
         .route("/api/v1/info", web::get().to(handler::info))
         .route("/api/v1/login", web::post().to(handler::login))
         .route("/api/v1/verify", web::get().to(handler::verify_token))
