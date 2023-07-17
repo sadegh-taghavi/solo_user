@@ -1,7 +1,5 @@
 use serde::Serialize;
-
 use actix_web::{Responder, web, HttpResponse};
-
 use chrono::prelude::Utc;
 
 pub async fn health() -> impl Responder {
