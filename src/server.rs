@@ -2,7 +2,7 @@ use sqlx::mysql::MySqlPool;
 
 use actix_web::{web, App, HttpServer};
 use crate::handler;
-use std::sync::{RwLock};
+use std::sync::RwLock;
 
 pub struct AppState {
     pub conf : super::config::Config,
