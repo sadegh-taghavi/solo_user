@@ -61,7 +61,7 @@ pub async fn verify_token(query: &crate::model::VerifyQuery, app_state: &crate::
         .await;
 
     if token_res.is_err() {
-        format!("response {:#?}", token_res.as_ref().err().unwrap() );
+        error!("response {:#?}", token_res.as_ref().err().unwrap() );
         return Result::Err( ErrorResponse { status: "500".to_string(), message: "token_res".to_string() })
     }else {
         let client = Client::new();
@@ -114,7 +114,7 @@ pub async fn verify_token(query: &crate::model::VerifyQuery, app_state: &crate::
             let result: Result<(), redis::RedisError> = app_state.redis.write().unwrap().set_ex( query.state.clone(), crate::service::generate_token(&profile, &app_state.conf.jwt),
              app_state.clone().conf.redis.token_retrive_timeout_secound.try_into().unwrap() );
             if result.is_err() {
-                format!("response {:#?}", result.as_ref().err().unwrap() );
+                error!("response {:#?}", result.as_ref().err().unwrap() );
                 return Result::Err( ErrorResponse { status: "500".to_string(), message: "redis set".to_string() })   
             }
 
@@ -130,7 +130,7 @@ pub async fn get_token(query: &crate::model::TokenQuery, app_state: &crate::serv
     }else {
         let result: Result<Option<String>, redis::RedisError> = app_state.redis.write().unwrap().get( query.refid.clone());
         if result.is_err() {
-            format!("response {:#?}", result.as_ref().err().unwrap() );
+            error!("response {:#?}", result.as_ref().err().unwrap() );
             return Result::Err( ErrorResponse { status: "500".to_string(), message: "redis set".to_string() })   
         }
         let token = match result.unwrap() {

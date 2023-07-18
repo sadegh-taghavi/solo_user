@@ -1,3 +1,4 @@
+use redis::Commands;
 use sqlx::mysql::MySqlPool;
 
 use actix_web::{web, App, HttpServer};
@@ -24,11 +25,16 @@ pub async fn init(conf : super::config::Config) -> std::io::Result<()> {
     if con_result.is_err() {
         panic!("error in redis connection")
     }
+    let mut con = con_result.unwrap();
+    let result: Result<(), redis::RedisError> = con.set_ex("test", "ok", TryInto::<usize>::try_into(10).unwrap());
+    if result.is_err() {
+        panic!("error in redis connection")
+    }
 
     let app_state = web::Data::new(AppState { 
         conf: conf.clone(),
         dbp: db_result.unwrap(),
-        redis: con_result.unwrap().into()
+        redis: con.into(),
     });
 
     
